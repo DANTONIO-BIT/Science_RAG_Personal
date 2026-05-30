@@ -1,0 +1,29 @@
+# RAG system dependencies
+# Install into an isolated venv (NOT global), Python 3.10+ (the mcp package
+# requires >=3.10; chromadb 1.5.0 runs fine on 3.10-3.12 under Apple Silicon):
+#   /opt/homebrew/bin/python3.10 -m venv .venv
+#   .venv/bin/pip install -r infra/rag/requirements.txt
+
+# Vector store
+# PINNED to 1.5.0: newer 1.5.x (e.g. 1.5.8) segfault on HNSW vector queries
+# under macOS/ARM64 (Apple Silicon). Do NOT loosen without testing QUERY
+# (not just ingest) on the target machine.
+chromadb==1.5.0
+
+# PDF parsing
+pypdf>=4.0.0
+
+# HTTP (Ollama + Anthropic fallback)
+httpx>=0.27.0
+
+# Anthropic SDK (cloud escalation path)
+anthropic>=0.30.0
+
+# File watcher (auto-ingest)
+watchdog>=4.0.0
+
+# Config
+pyyaml>=6.0
+
+# MCP server (FastMCP — exposes science tools to OpenCode + Claude Code)
+mcp>=1.0.0

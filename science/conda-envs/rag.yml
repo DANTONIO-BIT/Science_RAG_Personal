@@ -1,0 +1,36 @@
+name: rag-system
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.11
+  - pip
+
+  - pip:
+    # Vector store
+    - chromadb>=0.5
+
+    # PDF parsing
+    - pypdf>=4.0
+
+    # File watching
+    - watchdog>=4.0
+
+    # Config
+    - pyyaml>=6.0
+    - python-dotenv>=1.0
+
+    # HTTP (Ollama + Claude API)
+    - requests>=2.31
+    - anthropic>=0.40
+
+    # Scientific text / NGS parsing
+    - biopython>=1.83          # FASTA parsing
+    - pandas>=2.0              # TSV/CSV tables (DESeq2, edgeR)
+    - beautifulsoup4>=4.12     # FastQC HTML reports
+    - lxml>=5.0                # HTML parser backend
+
+    # Future: SPECTER2 upgrade path
+    # - sentence-transformers>=3.0
+    # - torch>=2.0

@@ -1,0 +1,68 @@
+# ============================================================================
+#  DATA SOVEREIGNTY — only the ARCHITECTURE goes to GitHub.
+#  Knowledge (papers, notes, NGS, wiki nodes, vector store) is custodied locally
+#  and migrated via scripts/backup.py + restore.py. A fresh machine is rebuilt
+#  with scripts/bootstrap.sh, which recreates the data/ skeleton.
+#  NOTE: gitignore does NOT support inline comments — keep '#' on its own line.
+# ============================================================================
+
+# --- Knowledge & data (NEVER versioned) ---
+data/
+projects/
+infra/rag/input/
+backups/
+
+# wiki synthesis nodes (may be private-derived) — keep only the placeholder
+wiki/auto_generated/*
+!wiki/auto_generated/.gitkeep
+
+# --- Vector store & runtime artifacts (rebuilt from sources) ---
+infra/rag/data/chroma_db/
+infra/rag/logs/
+infra/rag/cache/
+*.sqlite3
+
+# --- Secrets & local config ---
+.env
+opencode.json
+safe_workspace/
+
+# --- Heavy / binary defense-in-depth (never push documents or media) ---
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.bin
+*.model
+
+# --- Raw NGS (too large, never embedded) ---
+*.fastq
+*.fastq.gz
+*.fq
+*.fq.gz
+*.bam
+*.cram
+*.sam
+
+# --- Node ---
+node_modules/
+coverage/
+dist/
+*.log
+
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+.Python
+*.egg-info/
+.venv/
+env/
+
+# --- OS ---
+.DS_Store

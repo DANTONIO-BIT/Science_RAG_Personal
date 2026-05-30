@@ -1,0 +1,62 @@
+# RAG System Configuration
+# Modify paths and thresholds here — never hardcode in src/
+
+embedding:
+  model: bge-m3                        # Ollama model name
+  base_url: http://localhost:11434
+  dimensions: 1024
+  batch_size: 32
+
+chunking:
+  size: 1500                           # chars per chunk
+  overlap: 200                         # overlap between consecutive chunks
+
+chroma:
+  persist_directory: infra/rag/data/chroma_db
+  collections:
+    public: public                     # papers, references, pipelines, ngs results
+    private: private                   # hypotheses, notes, internal synthesis
+
+routing:
+  confidence_high: 0.85                # above → answer from local RAG + local LLM
+  confidence_low: 0.50                 # below → escalate to Claude API
+
+llm:
+  local:
+    model: qwen3:8b                    # best available locally for scientific synthesis
+    base_url: http://localhost:11434
+    temperature: 0.2
+  cloud:
+    provider: openrouter                            # openrouter (default, free tier) | anthropic
+    model: nvidia/nemotron-3-super-120b-a12b:free   # OpenRouter model (override: OPENROUTER_MODEL)
+    anthropic_model: claude-opus-4-8                # only used if provider: anthropic (billed API)
+    max_tokens: 4096
+    temperature: 0.3
+    require_user_confirm_if_private: true  # gate: never send private context silently
+
+data:
+  watch_dirs:
+    public: data/public
+    private: data/private
+    ngs: data/ngs
+  inbox_dir: data/public/papers/inbox
+  indexed_dir: data/public/papers/indexed
+  supported_extensions:
+    - .pdf
+    - .md
+    - .txt
+    - .fasta
+    - .vcf
+    - .bed
+    - .tsv
+    - .csv
+    - .html                            # FastQC reports
+
+wiki:
+  output_dir: wiki/auto_generated
+  quality_threshold: 0.80             # min confidence to auto-write a wiki node
+  max_node_length: 2000               # chars
+
+logs:
+  dir: infra/rag/logs
+  level: INFO

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "science": {
+      "command": "/Users/diego/Desktop/secure-ai-agent-architecture/.venv/bin/python",
+      "args": ["agent/mcp_server.py"],
+      "cwd": "/Users/diego/Desktop/secure-ai-agent-architecture"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "ollama/qwen3:8b",
+  "mcp": {
+    "science": {
+      "type": "local",
+      "command": ["python", "agent/mcp_server.py"],
+      "enabled": true
+    },
+    "notion": {
+      "type": "remote",
+      "url": "https://mcp.notion.com/mcp",
+      "enabled": true
+    }
+  }
+}
