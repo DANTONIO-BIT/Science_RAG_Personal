@@ -11,6 +11,11 @@ data/
 projects/
 infra/rag/input/
 backups/
+engram/
+
+# stray artifacts (e.g. a file accidentally named like a CLI flag; engram dumps)
+/--help
+*engram-export*.json
 
 # wiki synthesis nodes (may be private-derived) — keep only the placeholder
 wiki/auto_generated/*

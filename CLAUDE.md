@@ -166,11 +166,13 @@ Goal: push *code* to GitHub, keep *data* private, and rebuild the full system on
 **Reproducibility works.** `infra/rag/src/reingest_all.py` walks `data/` + `wiki/auto_generated/` + `projects/` and re-ingests every supported file with the correct collection routing. `ingest_file` is idempotent (id = sha256(repo-relative-path::index), upsert) so re-running never duplicates, and ids are **portable across machines** (no absolute paths). Same files + same `bge-m3` + same chunking config → byte-stable index. `scripts/restore.py` always does a **clean** rebuild (deletes `chroma_db/` first), so no stale chunks from deleted files survive. Verified: a full clean reindex reproduced identical counts (public 3322 · private 177 · wiki 2).
 
 **Migration tooling (`scripts/`):**
-- `scripts/backup.py` → bundles `data/` + `wiki/auto_generated/` into `backups/knowledge-<date>.tar.gz` with a `manifest.json` (sha256 per file). This is your custodied snapshot — **includes the wiki nodes accumulated over time**. `--no-private` excludes private notes for sharing.
-- `scripts/restore.py <bundle>` → extracts (with path-traversal guards + sha256 verification), then **rebuilds the index from scratch** (deletes `chroma_db/`, runs `reingest_all`). `--reindex-only` rebuilds from the current `data/` without a bundle.
+- `scripts/backup.py` → bundles `data/` + `projects/` + `wiki/auto_generated/` + secrets (`.env`, `opencode.json`) + **Engram memory** (`engram export`) into `backups/knowledge-<date>.tar.gz` with a `manifest.json` (sha256 per file). This is your full custodied snapshot — **includes the wiki nodes and the cognitive state accumulated over time**. Excludes noise (`.git`, `__pycache__`, `node_modules`, `chroma_db`). Flags: `--no-private`, `--no-secrets`, `--no-engram`.
+- `scripts/restore.py <bundle>` → extracts (with path-traversal guards + sha256 verification), **imports Engram memory** (`engram import` — clean import on a fresh machine), then **rebuilds the index from scratch** (deletes `chroma_db/`, runs `reingest_all`). `--reindex-only` rebuilds from the current `data/` without a bundle.
 - `scripts/bootstrap.sh [bundle]` → fresh-machine setup: venv + `pip install` + `npm install` + recreate `data/` skeleton + `.env` from example + `ollama pull bge-m3 qwen3:8b`, then restores the bundle if given.
 
-**Round trip:** `backup.py` on machine A → copy bundle (your custody, never git) → `bootstrap.sh bundle.tar.gz` on machine B → system fully reconstituted, wiki included.
+**Round trip:** `backup.py` on machine A → copy bundle (your custody, never git) → `bootstrap.sh bundle.tar.gz` on machine B → system fully reconstituted: data, projects, wiki, secrets and Engram memory.
+
+**Engram note:** `engram export` dumps the *entire* Engram DB (all projects on the machine, not just `science-agent`); `engram import` only applies cleanly to an empty DB (fresh machine), so restore warns instead of failing if the target DB already has data.
 
 **`.gitignore` — resolved:** only the architecture is committed. ALL of `data/`, `projects/`, `infra/rag/input/`, `wiki/auto_generated/*` (except `.gitkeep`), `backups/`, the vector store, and heavy/binary types (`*.pdf`, `*.png`, `*.sqlite3`, …) are excluded. The `data/` skeleton is recreated by `bootstrap.sh`, not versioned.
 

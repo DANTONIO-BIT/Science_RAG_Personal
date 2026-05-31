@@ -2,10 +2,11 @@
 """
 scripts/restore.py — Restaura el conocimiento custodiado y reconstruye el índice.
 
-Extrae un bundle creado por backup.py (data/ + nodos wiki), verifica integridad
-con el manifest (sha256) y reindexa ChromaDB DESDE CERO, de modo que en una
-máquina nueva el sistema vuelve a quedar idéntico — incluidos los nodos wiki
-que se fueron generando con el tiempo (quedan disponibles para search_memory).
+Extrae un bundle creado por backup.py (data/ + projects/ + nodos wiki + secretos
+.env/opencode.json + memoria Engram), verifica integridad con el manifest
+(sha256), importa la memoria Engram y reindexa ChromaDB DESDE CERO, de modo que
+en una máquina nueva el sistema vuelve a quedar idéntico — incluidos el corpus de
+projects/, los nodos wiki y el estado cognitivo de Engram.
 
 Reindex limpio = borra infra/rag/data/chroma_db/ y vuelve a ejecutar
 infra.rag.src.reingest_all, evitando chunks huérfanos de archivos eliminados.
@@ -22,6 +23,7 @@ import argparse
 import hashlib
 import json
 import shutil
+import subprocess
 import sys
 import tarfile
 from pathlib import Path
@@ -30,8 +32,12 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 CHROMA_DIR = REPO_ROOT / "infra" / "rag" / "data" / "chroma_db"
 MANIFEST_NAME = "manifest.json"
 
-# Prefijos permitidos dentro del bundle — defensa anti path-traversal.
-ALLOWED_PREFIXES = ("data/", "wiki/auto_generated/")
+# Prefijos / archivos permitidos dentro del bundle — defensa anti path-traversal.
+ALLOWED_PREFIXES = ("data/", "wiki/auto_generated/", "projects/", "engram/")
+ALLOWED_FILES = (".env", "opencode.json")
+
+ENGRAM_BIN = shutil.which("engram") or "/usr/local/bin/engram"
+ENGRAM_EXPORT = REPO_ROOT / "engram" / "engram-export.json"
 
 
 def _sha256(path: Path) -> str:
@@ -53,7 +59,7 @@ def _safe_members(tar: tarfile.TarFile):
         if p.is_absolute() or ".." in p.parts:
             print(f"  ! omito miembro inseguro: {name}", file=sys.stderr)
             continue
-        if not name.startswith(ALLOWED_PREFIXES):
+        if not (name.startswith(ALLOWED_PREFIXES) or name in ALLOWED_FILES):
             print(f"  ! omito miembro fuera de alcance: {name}", file=sys.stderr)
             continue
         yield m
@@ -100,8 +106,35 @@ def extract_bundle(bundle: Path, verify: bool) -> int:
     return len(data_members)
 
 
+def import_engram() -> None:
+    """Importa la memoria Engram del bundle (engram/engram-export.json), si existe.
+
+    Best-effort: `engram import` falla con error de constraint si la DB ya tiene
+    datos, así que está pensado para una DB limpia (máquina nueva). No aborta el
+    restore — solo avisa."""
+    if not ENGRAM_EXPORT.exists():
+        return
+    if not Path(ENGRAM_BIN).exists():
+        print(f"  ! Engram no instalado — memoria queda en {ENGRAM_EXPORT} (sin importar)")
+        return
+    print("-> importando memoria Engram")
+    try:
+        r = subprocess.run(
+            [ENGRAM_BIN, "import", str(ENGRAM_EXPORT)],
+            capture_output=True, text=True, timeout=180,
+        )
+        if r.returncode == 0:
+            print("   OK memoria Engram importada")
+        else:
+            print("   AVISO: engram import devolvió error (¿la DB ya tenía datos?):")
+            print(f"   {(r.stderr or r.stdout).strip()[:200]}")
+            print("   El import limpio solo aplica en una máquina nueva (DB Engram vacía).")
+    except (subprocess.TimeoutExpired, OSError) as e:
+        print(f"   AVISO: no se pudo importar Engram: {e}")
+
+
 def reindex() -> int:
-    """Borra el vector store y reconstruye desde data/ + projects/."""
+    """Borra el vector store y reconstruye desde data/ + projects/ + wiki/."""
     if CHROMA_DIR.exists():
         print(f"-> borrando índice anterior: {CHROMA_DIR}")
         shutil.rmtree(CHROMA_DIR)
@@ -143,6 +176,8 @@ def main() -> int:
     n = extract_bundle(bundle, verify=not args.no_verify)
     if n < 0:
         return 1
+
+    import_engram()
 
     if args.no_reindex:
         print("Listo (sin reindexar). Ejecuta luego: python scripts/restore.py --reindex-only")
